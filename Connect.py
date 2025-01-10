@@ -1,0 +1,35 @@
+from sqlmodel import SQLModel, Field
+from typing import Optional
+from datetime import datetime
+ 
+class Employee(SQLModel, table=True):  # Specify table=True for ORM mapping
+    employee_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
+    employee_name: str = Field(nullable=False, max_length=50)
+    is_admin: bool = Field(default=False)
+    email: str = Field(nullable=False, max_length=100, unique=True)
+    password: str = Field(nullable=False, max_length=100)
+    department: str = Field(nullable=False, max_length=50)
+    designation: str = Field(nullable=False, max_length=50)
+    date_joined: Optional[datetime] = Field(default_factory=datetime.now)
+ 
+class Asset(SQLModel, table=True):  # Specify table=True for ORM mapping
+    asset_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
+    asset_type: str = Field(nullable=False, max_length=50)
+    asset_model: str = Field(nullable=False, max_length=100)
+    asset_sl_no: str = Field(nullable=False, max_length=100)
+    asset_purchasedate: Optional[datetime] = Field(default_factory=datetime.now)
+    asset_warranty_end: Optional[datetime] = Field(default_factory=datetime.now)
+    asset_status: str = Field(nullable=False, max_length=50)
+    quantity_available: int = Field(nullable=False)
+    quantity_allocated: int = Field(nullable=False)
+ 
+class Notification(SQLModel, table=True):  # Specify table=True for ORM mapping
+    notification_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
+    sender_id: int = Field(nullable=False, foreign_key="employee.employee_id")
+    recipient_id: int = Field(nullable=False, foreign_key="employee.employee_id")
+    message: str = Field(nullable=False, unique=True, max_length=255)
+    sent_at: Optional[datetime] = Field(default_factory=datetime.now)
+    priority: int = Field(nullable=False)
+ 
+ 
+ 
