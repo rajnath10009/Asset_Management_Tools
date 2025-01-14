@@ -10,9 +10,8 @@ class Employee(SQLModel, table=True):  # Specify table=True for ORM mapping
     password: str = Field(nullable=False, max_length=100)
     department: str = Field(nullable=False, max_length=50)
     designation: str = Field(nullable=False, max_length=50)
-    date_joined: Optional[datetime] = Field(default_factory=datetime.now)
-#  jbk
- 
+    date_joined: Optional[datetime] = Field(default_factory=datetime.now) 
+    
 class Asset(SQLModel, table=True):  # Specify table=True for ORM mapping
     asset_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
     asset_type: str = Field(nullable=False, max_length=50)
