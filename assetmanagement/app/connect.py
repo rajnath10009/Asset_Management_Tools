@@ -42,4 +42,4 @@ class Ticket(SQLModel, table=True):
     returned_condition: str = Field(nullable=True, max_length=255)
     raised_at: Optional[datetime] = Field(default=datetime.now)
     resolved_at: Optional[datetime] = Field(default=datetime.now)
-
+ 
