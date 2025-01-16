@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
- 
+
 class Employee(SQLModel, table=True):  # Specify table=True for ORM mapping
     employee_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
     employee_name: str = Field(nullable=False, max_length=50)
