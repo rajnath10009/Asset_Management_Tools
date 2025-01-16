@@ -39,15 +39,7 @@ class EmployeeUpdate(BaseModel):
 class AdminDeleteRequest(BaseModel):
     admin_email: str
 
-# Employee response schema
-class EmployeeResponse(EmployeeCreate):
-    employee_id: int
-    date_joined: datetime
-
-    class Config:
-        from_attributes = True
-
-# Helper function to get the database session
+# database session
 def get_db():
     with SQLSession(engine) as session:
         yield session
@@ -62,9 +54,6 @@ def verify_admin(email: str, db: Session):
 # Signup Route
 @app.post("/signup")
 def signup(employee: EmployeeCreate, db: Session = Depends(get_db)):
-    # Admin privileges cannot be set by the user
-    # Ensure `is_admin` is always set to False, even if provided
-    # This prevents users from assigning themselves admin roles
 
     # Hash the password
     hashed_password = pwd_context.hash(employee.password)
@@ -77,7 +66,7 @@ def signup(employee: EmployeeCreate, db: Session = Depends(get_db)):
         department=employee.department,
         designation=employee.designation,
         date_joined=datetime.now(timezone.utc),
-        is_admin=False  # Explicitly set to False, even if passed
+        is_admin=False 
     )
 
     # Save the employee to the database
@@ -119,12 +108,12 @@ def login(login_data: EmployeeLogin, db: Session = Depends(get_db)):
     # Return success response
     return {"message": "Login successful", "is_admin": db_employee.is_admin}
 
-# Admin Route to Update Employee Details (no password and no is_admin changes)
+# Admin Route to Update Employee Details
 @app.put("/admin/update-employee/{employee_id}")
 def update_employee(
     employee_id: int,
-    employee: EmployeeUpdate,  # Expect employee data to be passed in JSON body
-    admin_email: str,  # admin_email is passed as a query parameter
+    employee: EmployeeUpdate,  
+    admin_email: str, 
     db: Session = Depends(get_db),
 ):
     # Verify if the requester is an admin
@@ -155,7 +144,7 @@ def update_employee(
 @app.delete("/admin/delete-employee/{employee_id}")
 def delete_employee(
     employee_id: int,
-    delete_request: AdminDeleteRequest,  # Expect admin_email in JSON body
+    delete_request: AdminDeleteRequest,  
     db: Session = Depends(get_db)
 ):
     # Verify if the requester is an admin
