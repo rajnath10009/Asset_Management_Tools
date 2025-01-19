@@ -36,10 +36,9 @@ class Ticket(SQLModel, table=True):
     employee_id: Optional[int] = Field(default=None, foreign_key='employee.employee_id')
     asset_id: Optional[int] = Field(default=None, foreign_key='asset.asset_id')
     ticket_type: str = Field(nullable=False, max_length=50)
-    ticket_status: Optional[int] = Field(default=None, foreign_key='notification.notification_id')
+    ticket_status: Optional[int] = Field(nullable=False, max_length=50)
     assigned_date: Optional[datetime] = Field(default=datetime.today)
     return_date: Optional[datetime] = Field(default=datetime.today)
-    returned_condition: str = Field(nullable=True, max_length=255)
     raised_at: Optional[datetime] = Field(default=datetime.now)
     resolved_at: Optional[datetime] = Field(default=datetime.now)
  
