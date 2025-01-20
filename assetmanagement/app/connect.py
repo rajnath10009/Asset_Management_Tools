@@ -41,4 +41,3 @@ class Ticket(SQLModel, table=True):
     raised_at: Optional[datetime] = Field(default_factory=datetime.utcnow)  # Use default_factory to ensure current time
     resolved_at: Optional[datetime] = Field(default=None, nullable=True)  # Set None as default for unresolved tickets
     priority: str = Field(default=None,max_length=255)
- 
