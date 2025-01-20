@@ -1,6 +1,15 @@
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field,Session,create_engine
 from typing import Optional
-from datetime import datetime       
+from datetime import datetime  
+from sqlalchemy import create_engine
+
+
+# Database connection URL (replace with your MySQL credentials)
+SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:qwerty111@localhost/proj"
+
+# Create an engine to interact with the database
+engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+
 
 class Employee(SQLModel, table=True):  # Specify table=True for ORM mapping
     employee_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
@@ -19,8 +28,11 @@ class Asset(SQLModel, table=True):  # Specify table=True for ORM mapping
     asset_sl_no: str = Field(nullable=False, max_length=100)
     asset_purchasedate: Optional[datetime] = Field(default_factory=datetime.now)
     asset_warranty_end: Optional[datetime] = Field(default_factory=datetime.now)
+    assigned_date: Optional[datetime] = Field(default=datetime.today)
+    return_date: Optional[datetime] = Field(default=datetime.today)
     asset_status: str = Field(nullable=False, max_length=50)
     allocated_to: int = Field(nullable=False, foreign_key="employee.employee_id")
+
  
 class Notification(SQLModel, table=True):  # Specify table=True for ORM mapping
     notification_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
@@ -36,9 +48,11 @@ class Ticket(SQLModel, table=True):
     employee_id: Optional[int] = Field(default=None, foreign_key='employee.employee_id')
     asset_id: Optional[int] = Field(default=None, foreign_key='asset.asset_id')
     ticket_type: str = Field(nullable=False, max_length=50)
-    ticket_status: Optional[int] = Field(default=None, foreign_key='notification.notification_id')
-    assigned_date: Optional[datetime] = Field(default=datetime.today)
-    return_date: Optional[datetime] = Field(default=datetime.today)
+    ticket_status: str = Field(default=None,max_length=255)
     returned_condition: str = Field(nullable=True, max_length=255)
-    raised_at: Optional[datetime] = Field(default=datetime.now)
-    resolved_at: Optional[datetime] = Field(default=datetime.now)
+    raised_at: Optional[datetime] = Field(default_factory=datetime.utcnow)  # Use default_factory to ensure current time
+    resolved_at: Optional[datetime] = Field(default=None, nullable=True)  # Set None as default for unresolved tickets
+    priority: str = Field(default=None,max_length=255)
+    # raised_at: Optional[datetime] = Field(default=datetime.now)
+    # resolved_at: Optional[datetime] = Field(nullable=True,default=datetime.now)
+

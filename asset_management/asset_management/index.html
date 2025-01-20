@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Login Form</title>
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.1/css/all.css">
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- jQuery for AJAX -->
+    </head>
+    <body>
+        <div class="login">
+            <h1>LOGIN</h1>
+            <div class="links">
+                <a href="{{ url_for('login') }}" class="active">LOGIN</a>
+                <a href="{{ url_for('register') }}">REGISTER</a>
+            </div>
+            <form id="loginForm">
+                <label for="employee_id">
+                    <i class="fa fa-user"></i>
+                </label>
+                <input type="text" name="employee_id" placeholder="employee_id" id="employee_id" required>
+                <label for="password">
+                    <i class="fa fa-lock"></i>
+                </label>
+                <input type="password" name="password" placeholder="Password" id="password" required>
+                <input type="submit" value="Login">
+            </form>
+
+            <!-- Display message -->
+            <p id="msg" style="color:red;"></p> <!-- Error message will appear here -->
+        </div>
+
+        <script>
+            // jQuery to handle the form submission via AJAX
+            $(document).ready(function(){
+                $('#loginForm').on('submit', function(event){
+                    event.preventDefault(); // Prevent the default form submission
+
+                    // Get the form data
+                    var employee_id = $('#employee_id').val();
+                    var password = $('#password').val();
+
+                    // Send the data to the Flask API via AJAX (POST request)
+                    $.ajax({
+                        url: 'http://127.0.0.1:5000/login', // Your Flask login route
+                        type: 'POST',
+                        data: {
+                            employee_id: employee_id,
+                            password: password
+                        },
+                        success: function(response){
+                            // Handle the success response from Flask (e.g., login successful)
+                            if (response.success) {
+                                console.log(response);
+                                window.location.href = '/home';  // Redirect to the home page after successful login
+                            } else {
+                                console.log(response)
+                                $('#msg').text(response.message); // Show the error message
+                            }
+                        },
+                        error: function(){
+                            $('#msg').text('Something went wrong, please try again.'); // Error handling
+                        }
+                    });
+                });
+            });
+        </script>
+    </body>
+</html>
