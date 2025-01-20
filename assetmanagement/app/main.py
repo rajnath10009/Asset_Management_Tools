@@ -7,6 +7,7 @@ from .connect import Employee,Asset,Notification,Ticket
 from sqlmodel import SQLModel
 from datetime import datetime, timezone, timedelta
 from typing import List
+from fastapi import Query
 import jwt
 from enum import Enum
 from typing import Optional
@@ -29,25 +30,6 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 
-class NotificationBase(BaseModel):
-    sender_id: int
-    recipient_id: int
-    message: str
-    priority: str
- 
-class Notification1(BaseModel):    
-    recipient_id: int
-    message: str
- 
-class NotificationCreate(NotificationBase):
-    pass
- 
-class NotificationResponse(Notification1):
-    notification_id: int
-    sent_at: datetime
- 
-    class Config:
-        from_attributes = True
 
 # Employee creation schema (with password length validation)
 class EmployeeCreate(BaseModel):
@@ -82,16 +64,37 @@ class AssetCreate(BaseModel):
     asset_status: str
     allocated_to: int
     
-# Database session dependency
+
+class NotificationBase(BaseModel):
+    sender_id: int
+    recipient_id: int
+    message: str
+    priority: str
+ 
+class Notification1(BaseModel):    
+    recipient_id: int
+    message: str
+ 
+class NotificationCreate(NotificationBase):
+    pass
+ 
+class NotificationResponse(Notification1):
+    notification_id: int
+    sent_at: datetime
+ 
+    class Config:
+        from_attributes = True
+    
+# Database session 
 def get_db():
     with SQLSession(engine) as session:
         yield session
 
-# Function to verify password
+#  verify password
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-# JWT token creation function
+# JWT token function
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
@@ -116,7 +119,7 @@ def verify_admin(token: str, db: Session):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     except jwt.PyJWTError:
         raise credentials_exception
-from fastapi import Query
+
 
 @app.post("/login")
 def login(
