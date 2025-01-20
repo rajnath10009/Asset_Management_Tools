@@ -26,9 +26,9 @@ class Notification(SQLModel, table=True):  # Specify table=True for ORM mapping
     notification_id: Optional[int] = Field(default=None, primary_key=True)  # Removed autoincrement
     sender_id: int = Field(nullable=False, foreign_key="employee.employee_id")
     recipient_id: int = Field(nullable=False, foreign_key="employee.employee_id")
-    message: str = Field(nullable=False, unique=True, max_length=255)
+    message: str = Field(nullable=False, max_length=255)
     sent_at: Optional[datetime] = Field(default_factory=datetime.now)
-    priority: int = Field(nullable=False)
+    priority: str = Field(nullable=False, max_length=50)
  
 class Ticket(SQLModel, table=True):
     __tablename__ = 'Ticket'
@@ -36,10 +36,9 @@ class Ticket(SQLModel, table=True):
     employee_id: Optional[int] = Field(default=None, foreign_key='employee.employee_id')
     asset_id: Optional[int] = Field(default=None, foreign_key='asset.asset_id')
     ticket_type: str = Field(nullable=False, max_length=50)
-    ticket_status: Optional[int] = Field(default=None, foreign_key='notification.notification_id')
-    assigned_date: Optional[datetime] = Field(default=datetime.today)
-    return_date: Optional[datetime] = Field(default=datetime.today)
-    returned_condition: str = Field(nullable=True, max_length=255)
-    raised_at: Optional[datetime] = Field(default=datetime.now)
-    resolved_at: Optional[datetime] = Field(default=datetime.now)
+    asset_type: str = Field(nullable=False, max_length=50)
+    ticket_status: str = Field(default=None,max_length=255)
+    raised_at: Optional[datetime] = Field(default_factory=datetime.utcnow)  # Use default_factory to ensure current time
+    resolved_at: Optional[datetime] = Field(default=None, nullable=True)  # Set None as default for unresolved tickets
+    priority: str = Field(default=None,max_length=255)
  

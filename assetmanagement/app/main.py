@@ -3,10 +3,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from sqlmodel import Session as SQLSession, create_engine, select
-from .connect import Employee,Asset
+from .connect import Employee,Asset,Notification,Ticket
+from sqlmodel import SQLModel
 from datetime import datetime, timezone, timedelta
 from typing import List
 import jwt
+from enum import Enum
+from typing import Optional
+import pytz
 
 
 
@@ -23,6 +27,27 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+
+class NotificationBase(BaseModel):
+    sender_id: int
+    recipient_id: int
+    message: str
+    priority: str
+ 
+class Notification1(BaseModel):    
+    recipient_id: int
+    message: str
+ 
+class NotificationCreate(NotificationBase):
+    pass
+ 
+class NotificationResponse(Notification1):
+    notification_id: int
+    sent_at: datetime
+ 
+    class Config:
+        from_attributes = True
 
 # Employee creation schema (with password length validation)
 class EmployeeCreate(BaseModel):
@@ -302,6 +327,15 @@ async def update_asset(
 
     return {"message": "Asset updated successfully", "asset": db_asset}
 
+
+@app.get("/user/assets", response_model=List[Asset])
+async def get_user_assets(user_id: int,  db: Session = Depends(get_db)):
+     # Verify if the requester is an admin
+    # verify_admin(token, db)
+    # Fetch assets allocated to the specific user
+    assets = db.exec(select(Asset).where(Asset.allocated_to == user_id)).all()
+    return assets
+
 # Admin Route to Delete Asset
 @app.delete("/admin/assets/delete/{asset_id}")
 async def delete_asset(
@@ -322,3 +356,250 @@ async def delete_asset(
     db.commit()
 
     return {"message": "Asset deleted successfully"}
+
+
+### notification
+
+
+ 
+
+ 
+
+ 
+# Notification Endpoints Integrated with JWT Authentication
+ 
+@app.get("/notifications/", response_model=List[NotificationResponse])
+def get_notifications(
+    token: str = Query(..., description="JWT token for authentication"),
+    session: Session = Depends(get_db),
+):
+    """
+    Fetch notifications for the authenticated user based on their role (admin or employee).
+    """
+    # Decode the JWT token to get the user details
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+ 
+    # Fetch the user from the database
+    user = session.exec(select(Employee).where(Employee.email == email)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User does not exist")
+ 
+    # Fetch notifications based on user role
+    if user.is_admin:
+        # Admin: Fetch notifications sent to the admin
+        query = select(Notification).where(Notification.recipient_id == user.employee_id).order_by(Notification.sent_at.desc())
+    else:
+        # Employee: Fetch notifications sent to the employee
+        query = select(Notification).where(Notification.recipient_id == user.employee_id).order_by(Notification.sent_at.desc())
+ 
+    notifications = session.exec(query).all()
+ 
+    if not notifications:
+        detail = "No notifications found for admin" if user.is_admin else "No notifications found for the employee"
+        raise HTTPException(status_code=404, detail=detail)
+ 
+    return notifications
+ 
+ 
+ 
+ ### tickets
+class TicketStatusEnum(str, Enum):
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
+
+
+class PriorityEnum(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+
+
+class TickettypeEnum(str, Enum):
+    REQUEST = "REQUEST"
+    MAINTENANCE = "MAINTENANCE"
+    RETURN = "RETURN"
+
+
+class AssetTypeEnum(str, Enum):
+    LAPTOP = "LAPTOP"
+    SPEAKER = "SPEAKER"
+    MONITOR = "MONITOR"
+    KEYBOARD = "KEYBOARD"
+    MOUSE = "MOUSE"
+
+ 
+ 
+class TicketBase(SQLModel):
+    ticket_type: Optional[TickettypeEnum]
+    asset_type: Optional[AssetTypeEnum]
+    priority: Optional[PriorityEnum] = PriorityEnum.LOW
+    raised_at: Optional[datetime] = None
+    ticket_status: Optional[TicketStatusEnum]
+
+class TicketCreate(TicketBase):
+    pass
+
+
+class TicketUpdate(SQLModel):
+    ticket_type: Optional[TickettypeEnum]
+    asset_type: Optional[AssetTypeEnum]
+    ticket_status: Optional[TicketStatusEnum]
+    resolved_at: Optional[datetime]
+    priority: Optional[PriorityEnum] = PriorityEnum.LOW
+
+
+class TicketRead(TicketBase):
+    employee_id: Optional[int]
+    ticket_id: int
+    asset_type: AssetTypeEnum
+    
+
+ 
+# Enum with string values
+
+# Timezone setup (use your local timezone)
+local_timezone = pytz.timezone('Asia/Kolkata')
+
+@app.get("/tickets/{ticket_id}", response_model=TicketRead)
+def read_ticket(
+    ticket_id: int,
+    token: str = Query(..., description="JWT token for authentication"),
+    session: Session = Depends(get_db),
+):
+    # Decode the JWT token to get the user details
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+    # Fetch the ticket
+    ticket = session.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    return ticket
+
+@app.post("/tickets/", response_model=TicketRead)
+def create_ticket(
+    ticket: TicketCreate,
+    token: str = Query(..., description="Token id"),
+    session: Session = Depends(get_db),
+):
+    # Decode the JWT token to get the user details
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+    # Fetch the employee details
+    employee = session.exec(select(Employee).where(Employee.email == email)).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="User does not exist")
+
+    # Create a new ticket
+    db_ticket = Ticket(**ticket.dict())
+    db_ticket.employee_id = employee.employee_id
+    if db_ticket.raised_at is None:
+        db_ticket.raised_at = datetime.now(local_timezone)
+    db_ticket.priority = db_ticket.priority or PriorityEnum.LOW
+
+    session.add(db_ticket)
+    session.commit()
+    session.refresh(db_ticket)
+
+    # Create a notification for the admin
+    notification_message = f"A new ticket #{db_ticket.ticket_id} has been raised by {employee.email}."
+
+    # Fetch the admin(s) to notify (assuming there is at least one admin)
+    admin = session.exec(select(Employee).where(Employee.is_admin == True)).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+
+    # Create the notification
+    notification = Notification(
+        sender_id=employee.employee_id,  # Set the sender_id from the employee who raised the ticket
+        recipient_id=admin.employee_id,  # Send the notification to the admin
+        message=notification_message,
+        priority=db_ticket.priority,
+    )
+    session.add(notification)
+    session.commit()
+
+    return db_ticket
+
+
+@app.put("/tickets/{ticket_id}", response_model=TicketRead)
+def update_ticket(
+    ticket_id: int,
+    ticket_update: TicketUpdate,
+    token: str = Query(..., description="JWT token for authentication"),
+    session: Session = Depends(get_db),
+):
+    # Decode the JWT token to get the user details
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Could not validate credentials")
+
+    # Fetch the employee details
+    employee = session.exec(select(Employee).where(Employee.email == email)).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="User does not exist")
+
+    # Fetch the ticket
+    db_ticket = session.get(Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Verify employee ownership if needed
+    if db_ticket.employee_id != employee.employee_id and not employee.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to update this ticket")
+
+    # Update the ticket
+    if ticket_update.ticket_status == TicketStatusEnum.CLOSED:
+        db_ticket.resolved_at = datetime.utcnow()
+    if ticket_update.ticket_type:
+        db_ticket.ticket_type = ticket_update.ticket_type
+    if ticket_update.ticket_status:
+        db_ticket.ticket_status = ticket_update.ticket_status
+    if ticket_update.priority:
+        db_ticket.priority = ticket_update.priority
+
+    session.commit()
+    session.refresh(db_ticket)
+
+    # Create a notification for the user (employee) when an admin updates the ticket
+    if employee.is_admin:
+        notification_message = f"Ticket #{db_ticket.ticket_id} has been updated by admin. New status: {db_ticket.ticket_status}."
+        recipient_id = db_ticket.employee_id  # The employee who owns the ticket
+    else:
+        notification_message = f"Your ticket #{db_ticket.ticket_id} has been updated. New status: {db_ticket.ticket_status}."
+        recipient_id = employee.employee_id  # The user who owns the ticket
+
+    notification = Notification(
+        sender_id=employee.employee_id,  # The sender (admin or employee)
+        recipient_id=recipient_id,  # The recipient (employee or admin depending on context)
+        message=notification_message,
+        priority=db_ticket.priority,
+    )
+    session.add(notification)
+    session.commit()
+
+    return db_ticket
