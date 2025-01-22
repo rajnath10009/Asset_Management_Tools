@@ -122,6 +122,7 @@ def get_session():
         yield session
 
 # POST endpoint to create a ticket and a notification
+# this comment is to test the git push command
 @app.post("/tickets/", response_model=TicketResponse)
 def create_ticket(ticket: TicketCreate, session: Session = Depends(get_session)):
     # Create the ticket
